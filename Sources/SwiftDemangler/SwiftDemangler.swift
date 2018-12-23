@@ -82,6 +82,36 @@ class Parser {
         fatalError(#function)
     }
 
+    func parseNominalType() -> NominalTypeHolder? {
+        let startIndex = self.index
+        let startRemains = self.remains
+
+        // 先読み
+        guard let nextLength = self.parseInt() else {
+            fatalError(#function)
+        }
+        let nominalTypeIdentifierIndex = nextLength + 1
+
+        guard startRemains.indices.contains(nominalTypeIdentifierIndex) else {
+            self.index = startIndex
+            return nil
+        }
+
+        guard let nominalType = NominalType(rawValue: startRemains[nominalTypeIdentifierIndex]) else {
+            self.index = startIndex
+            return nil
+        }
+
+        // 先読みした結果いけそうなことがわかったので、nominalTypeを読みにかかる
+        self.index = startIndex
+        guard let identifier = self.parseIdentifier() else {
+            fatalError(#function)
+        }
+        self.skip(length: 1) // NominalTypeIdentifierの分進める
+
+        return NominalTypeHolder(type: nominalType, name: identifier)
+    }
+
     func parseDeclName() -> String {
         if let declName = self.parseIdentifier() {
             return declName
@@ -99,7 +129,7 @@ class Parser {
 
     func parseKnownType() -> Type {
         let remains = self.remains
-        if let type = Type(c1: remains[0], c2: remains[1]) {
+        if let type = Type(name: remains) {
             self.skip(length: type.identifierLength)
             return type
         }
@@ -132,6 +162,7 @@ class Parser {
     func parseFunctionEntity() -> FunctionEntity {
         return FunctionEntity(
             module: self.parseModule(),
+            nominalType: self.parseNominalType(),
             declName: self.parseDeclName(),
             labelList: self.parseLabelList(),
             functionSignature: self.parseFunctionSignature(),
@@ -165,12 +196,15 @@ enum Type: Equatable, CustomStringConvertible {
     case void
     indirect case list([Type])
 
-    init?(c1: Character, c2: Character) {
-        switch c1 {
+    init?(name: [Character]) {
+        guard !name.isEmpty else { return nil }
+        switch name[0] {
         case "y":
             self = .void
         case "S":
-            switch c2 {
+            let count = name.count
+            guard count >= 2 else { return nil }
+            switch name[1] {
             case "b": self = .bool
             case "i": self = .int
             case "S": self = .string
@@ -224,8 +258,20 @@ struct FunctionSignature: Equatable {
     let argsType: Type
 }
 
+enum NominalType: Character {
+    case `struct` = "V"
+    case `class` = "O"
+    case `enum` = "C"
+}
+
+struct NominalTypeHolder: Equatable {
+    let type: NominalType
+    let name: String
+}
+
 struct FunctionEntity: Equatable, CustomStringConvertible {
     let module: String
+    let nominalType: NominalTypeHolder?
     let declName: String
     let labelList: [String]
     let functionSignature: FunctionSignature
@@ -236,13 +282,20 @@ struct FunctionEntity: Equatable, CustomStringConvertible {
             "\(label): \(typeName)"
         }.joined(separator: ", ")
 
+        let nominalTypeLabel: String
+        if let nominalType = self.nominalType {
+            nominalTypeLabel = "\(nominalType.name)."
+        } else {
+            nominalTypeLabel = ""
+        }
+
         let throwsLabel: String
         if self.throws {
             throwsLabel = " throws"
         } else {
             throwsLabel = ""
         }
-        return "\(module).\(declName)(\(args))\(throwsLabel) -> \(functionSignature.returnType)"
+        return "\(module).\(nominalTypeLabel)\(declName)(\(args))\(throwsLabel) -> \(functionSignature.returnType)"
     }
 }
 

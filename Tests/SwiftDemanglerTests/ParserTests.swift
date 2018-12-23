@@ -86,6 +86,7 @@ class ParserTests: XCTestCase {
         XCTAssertEqual(Parser(name: "Sb").parseKnownType(), .bool)
         XCTAssertEqual(Parser(name: "SS").parseKnownType(), .string)
         XCTAssertEqual(Parser(name: "Sf").parseKnownType(), .float)
+        XCTAssertEqual(Parser(name: "y").parseKnownType(), .void)
         XCTAssertEqual(Parser(name: "Sf_SfSft").parseType(), .list([.float, .float, .float]))
     }
 
@@ -97,6 +98,13 @@ class ParserTests: XCTestCase {
     func testParseFunctionEntity() {
         let sig = FunctionSignature(returnType: .bool, argsType: .list([.int]))
         XCTAssertEqual(Parser(name: "13ExampleNumber6isEven6numberSbSi_tF").parseFunctionEntity(),
-                       FunctionEntity(module: "ExampleNumber", declName: "isEven", labelList: ["number"], functionSignature: sig, throws: false))
+                       FunctionEntity(module: "ExampleNumber", nominalType: nil, declName: "isEven", labelList: ["number"], functionSignature: sig, throws: false))
+    }
+
+    func testParseNominalType() {
+        XCTAssertEqual(Parser(name: "3DogV").parseNominalType(),
+                       NominalTypeHolder(type: .struct, name: "Dog"))
+        XCTAssertEqual(Parser(name: "3Dog").parseNominalType(),
+                       nil)
     }
 }

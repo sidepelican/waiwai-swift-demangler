@@ -28,6 +28,11 @@ final class SwiftDemanglerTests: XCTestCase {
                        "ExampleNumber.isEven() -> ()")
     }
 
+    func testEx3() {
+        XCTAssertEqual(demangle(name: "$S13ExampleAnimal3DogV4barkSSyF"),
+                       "ExampleAnimal.Dog.bark() -> Swift.String")
+    }
+
     static var allTests = [
         ("testEx1", testEx1),
     ]
