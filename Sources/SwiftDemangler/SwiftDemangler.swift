@@ -3,7 +3,8 @@ public func demangle(name: String) -> String {
 }
 
 class Parser {
-    private let name: [Character]
+    private var name: [Character]
+    private let rawName: String
     private var index: Int
     
     var remains: [Character] { return Array(name[index...]) }
@@ -11,6 +12,7 @@ class Parser {
 
     init(name: String) {
         self.name = name.map { $0 }
+        self.rawName = name
         self.index = 0
     }
     
@@ -133,6 +135,24 @@ class Parser {
             self.skip(length: type.identifierLength)
             return type
         }
+
+        // 普通にパースして失敗 → 繰り返しの省略があった場合 ex) S2i
+        let startIndex = self.index
+        
+        let typeIdentifierHead = self.peek()
+        self.skip(length: 1)
+        if !remains.isEmpty, let repeatCount = self.parseInt() {
+            let typeIdentifierTail = self.peek()
+            self.index += 1
+            self.name.removeSubrange(startIndex..<self.index)
+            let omitted = "\(typeIdentifierHead)\(typeIdentifierTail)"
+            self.name.insert(contentsOf: (0..<repeatCount).lazy.map { _ in omitted }.reduce("", +).map { $0 }, at: startIndex)
+
+            // 繰り返し表現分が展開しおわったので、再度parseする
+            self.index = startIndex
+            return self.parseKnownType()
+        }
+
         fatalError(#function)
     }
 
@@ -140,7 +160,7 @@ class Parser {
         let firstType = self.parseKnownType()
 
         // リストかどうか
-        guard self.peek() == "_" else { return firstType }
+        guard !remains.isEmpty, self.peek() == "_" else { return firstType }
         self.skip(length: 1) // 先読みした "_" の分を進める
 
         var ret = [firstType]

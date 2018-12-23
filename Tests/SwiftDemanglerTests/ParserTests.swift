@@ -88,6 +88,14 @@ class ParserTests: XCTestCase {
         XCTAssertEqual(Parser(name: "Sf").parseKnownType(), .float)
         XCTAssertEqual(Parser(name: "y").parseKnownType(), .void)
         XCTAssertEqual(Parser(name: "Sf_SfSft").parseType(), .list([.float, .float, .float]))
+
+        var parser = Parser(name: "S2i")
+        XCTAssertEqual(parser.parseType(), .int)
+        XCTAssertEqual(parser.parseType(), .int)
+
+        parser = Parser(name: "S2i_S13it")
+        XCTAssertEqual(parser.parseType(), .int)
+        XCTAssertEqual(parser.parseType(), .list([Type](repeating: .int, count: 14)))
     }
 
     func testParseFunctionSignature() {
