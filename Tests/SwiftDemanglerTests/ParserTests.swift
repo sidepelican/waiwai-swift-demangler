@@ -37,4 +37,66 @@ class ParserTests: XCTestCase {
         XCTAssertEqual(parser.remainsString, "B2A")
         XCTAssertEqual(parser.parseInt(), nil)
     }
+
+    func testParseIdentifierWithLength() {
+        let parser = Parser(name: "3ABC4DEFG")
+
+        XCTAssertEqual(parser.parseInt(), 3)
+        XCTAssertEqual(parser.remainsString, "ABC4DEFG")
+        XCTAssertEqual(parser.parseIdentifier(length: 3), "ABC")
+        XCTAssertEqual(parser.remainsString, "4DEFG")
+
+        XCTAssertEqual(parser.parseInt(), 4)
+        XCTAssertEqual(parser.remainsString, "DEFG")
+        XCTAssertEqual(parser.parseIdentifier(length: 4), "DEFG")
+    }
+
+    func testParseIdentifier() {
+        let parser = Parser(name: "3ABC4DEFG")
+
+        XCTAssertEqual(parser.parseIdentifier(), "ABC")
+        XCTAssertEqual(parser.remainsString, "4DEFG")
+
+        XCTAssertEqual(parser.parseIdentifier(), "DEFG")
+    }
+
+    func testModule() {
+        let parser = Parser(name: "$S13ExampleNumber6isEven6numberSbSi_tF")
+        let _ = parser.parsePrefix()
+        XCTAssertEqual(parser.parseModule(), "ExampleNumber")
+    }
+
+    func testDeclName() {
+        let parser = Parser(name: "$S13ExampleNumber6isEven6numberSbSi_tF")
+        let _ = parser.parsePrefix()
+        let _ = parser.parseModule()
+        XCTAssertEqual(parser.parseDeclName(), "isEven")
+    }
+
+    func testLabelList() {
+        let parser = Parser(name: "$S13ExampleNumber6isEven6numberSbSi_tF")
+        let _ = parser.parsePrefix()
+        let _ = parser.parseModule()
+        let _ = parser.parseDeclName()
+        XCTAssertEqual(parser.parseLabelList(), ["number"])
+    }
+
+    func testParseKnownType() {
+        XCTAssertEqual(Parser(name: "Si").parseKnownType(), .int)
+        XCTAssertEqual(Parser(name: "Sb").parseKnownType(), .bool)
+        XCTAssertEqual(Parser(name: "SS").parseKnownType(), .string)
+        XCTAssertEqual(Parser(name: "Sf").parseKnownType(), .float)
+        XCTAssertEqual(Parser(name: "Sf_SfSft").parseType(), .list([.float, .float, .float]))
+    }
+
+    func testParseFunctionSignature() {
+        XCTAssertEqual(Parser(name: "SbSi_t").parseFunctionSignature(),
+                       FunctionSignature(returnType: .bool, argsType: .list([.int])))
+    }
+
+    func testParseFunctionEntity() {
+        let sig = FunctionSignature(returnType: .bool, argsType: .list([.int]))
+        XCTAssertEqual(Parser(name: "13ExampleNumber6isEven6numberSbSi_tF").parseFunctionEntity(),
+                       FunctionEntity(module: "ExampleNumber", declName: "isEven", labelList: ["number"], functionSignature: sig))
+    }
 }
