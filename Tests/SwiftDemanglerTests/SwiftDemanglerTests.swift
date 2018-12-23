@@ -18,7 +18,14 @@ final class SwiftDemanglerTests: XCTestCase {
     }
 
     func testEx2_void() {
+        XCTAssertEqual(demangle(name: "$S13ExampleNumber6isEvenSbyF"),
+                       "ExampleNumber.isEven() -> Swift.Bool")
 
+        XCTAssertEqual(demangle(name: "$S13ExampleNumber6isEven6numberySi_tF"),
+                       "ExampleNumber.isEven(number: Swift.Int) -> ()")
+
+        XCTAssertEqual(demangle(name: "$S13ExampleNumber6isEvenyyF"),
+                       "ExampleNumber.isEven() -> ()")
     }
 
     static var allTests = [

@@ -100,7 +100,7 @@ class Parser {
     func parseKnownType() -> Type {
         let remains = self.remains
         if let type = Type(c1: remains[0], c2: remains[1]) {
-            self.skip(length: 2)
+            self.skip(length: type.identifierLength)
             return type
         }
         fatalError(#function)
@@ -162,36 +162,57 @@ enum Type: Equatable, CustomStringConvertible {
     case int
     case string
     case float
+    case void
     indirect case list([Type])
 
     init?(c1: Character, c2: Character) {
-        if c1 != "S" { return nil }
-        switch c2 {
-        case "b": self = .bool
-        case "i": self = .int
-        case "S": self = .string
-        case "f": self = .float
-        default: return nil
+        switch c1 {
+        case "y":
+            self = .void
+        case "S":
+            switch c2 {
+            case "b": self = .bool
+            case "i": self = .int
+            case "S": self = .string
+            case "f": self = .float
+            default: return nil
+            }
+        default:
+            return nil
         }
     }
 
-    var names: [String] {
+    var identifierLength: Int {
+        switch self {
+        case .bool: return 2
+        case .int: return 2
+        case .string: return 2
+        case .float: return 2
+        case .void: return 1
+        case .list: fatalError()
+        }
+    }
+
+    var namesForLabelList: [String] {
         switch self {
         case .bool: return ["Swift.Bool"]
         case .int: return ["Swift.Int"]
         case .string: return ["Swift.String"]
         case .float: return ["Swift.Float"]
+        case .void: return []
         case let .list(types):
-            return types.flatMap { $0.names }
+            return types.flatMap { $0.namesForLabelList }
         }
     }
 
     var description: String {
         switch self {
         case let .list(types):
-            return "(\(types.flatMap { $0.names }.joined(separator: ", ")))"
+            return "(\(types.flatMap { $0.namesForLabelList }.joined(separator: ", ")))"
+        case .void:
+            return "()"
         default:
-            let names = self.names
+            let names = self.namesForLabelList
             assert(names.count == 1)
             return names[0]
         }
@@ -211,7 +232,7 @@ struct FunctionEntity: Equatable, CustomStringConvertible {
     let `throws`: Bool
 
     var description: String {
-        let args = zip(labelList, functionSignature.argsType.names).map { label, typeName in
+        let args = zip(labelList, functionSignature.argsType.namesForLabelList).map { label, typeName in
             "\(label): \(typeName)"
         }.joined(separator: ", ")
 
