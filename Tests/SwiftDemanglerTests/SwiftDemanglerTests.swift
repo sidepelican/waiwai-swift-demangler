@@ -7,6 +7,19 @@ final class SwiftDemanglerTests: XCTestCase {
                        "ExampleNumber.isEven(number: Swift.Int) -> Swift.Bool")
     }
 
+    func testEx2_MultiArgs() {
+        XCTAssertEqual(demangle(name: "$S13ExampleNumber6isEven6number4hoge4fugaSbSi_SSSftF"),
+                       "ExampleNumber.isEven(number: Swift.Int, hoge: Swift.String, fuga: Swift.Float) -> Swift.Bool")
+    }
+
+    func testEx2_throws() {
+        XCTAssertEqual(demangle(name: "$S13ExampleNumber6isEven6numberSbSi_tKF"),
+                       "ExampleNumber.isEven(number: Swift.Int) throws -> Swift.Bool")
+    }
+
+    func testEx2_void() {
+
+    }
 
     static var allTests = [
         ("testEx1", testEx1),

@@ -46,11 +46,33 @@ class Parser {
     }
 
     func parsePrefix() -> String {
-        if isSwiftSymbol(name: remainsString) {
+        let swiftPrefix = "$S"
+        if remainsString.hasPrefix(swiftPrefix) {
             self.skip(length: swiftPrefix.count)
             return swiftPrefix
         }
         fatalError("name has not swiftPrefix.")
+    }
+
+    func parseSuffix() -> Bool {
+        func isFunctionEntitySpec(name: String) -> Bool {
+            return name.hasSuffix("F")
+        }
+
+        func isThrowsFunctionEntitySpec(name: String) -> Bool {
+            return name.hasSuffix("KF")
+        }
+
+        let remainsString = self.remainsString
+        if isThrowsFunctionEntitySpec(name: remainsString) {
+            self.skip(length: 2)
+            return true
+        } else if isFunctionEntitySpec(name: remainsString) {
+            self.skip(length: 1)
+            return false
+        }
+
+        fatalError(#function)
     }
 
     func parseModule() -> String {
@@ -112,7 +134,9 @@ class Parser {
             module: self.parseModule(),
             declName: self.parseDeclName(),
             labelList: self.parseLabelList(),
-            functionSignature: self.parseFunctionSignature())
+            functionSignature: self.parseFunctionSignature(),
+            throws: self.parseSuffix()
+        )
     }
 
     func parse() -> FunctionEntity {
@@ -133,7 +157,7 @@ class Parser {
     }
 }
 
-enum Type: Equatable {
+enum Type: Equatable, CustomStringConvertible {
     case bool
     case int
     case string
@@ -161,6 +185,17 @@ enum Type: Equatable {
             return types.flatMap { $0.names }
         }
     }
+
+    var description: String {
+        switch self {
+        case let .list(types):
+            return "(\(types.flatMap { $0.names }.joined(separator: ", ")))"
+        default:
+            let names = self.names
+            assert(names.count == 1)
+            return names[0]
+        }
+    }
 }
 
 struct FunctionSignature: Equatable {
@@ -173,24 +208,21 @@ struct FunctionEntity: Equatable, CustomStringConvertible {
     let declName: String
     let labelList: [String]
     let functionSignature: FunctionSignature
+    let `throws`: Bool
 
     var description: String {
         let args = zip(labelList, functionSignature.argsType.names).map { label, typeName in
             "\(label): \(typeName)"
         }.joined(separator: ", ")
 
-        return "\(module).\(declName)(\(args)) -> \(functionSignature.returnType.names.first!)"
+        let throwsLabel: String
+        if self.throws {
+            throwsLabel = " throws"
+        } else {
+            throwsLabel = ""
+        }
+        return "\(module).\(declName)(\(args))\(throwsLabel) -> \(functionSignature.returnType)"
     }
-}
-
-private let swiftPrefix = "$S"
-
-func isSwiftSymbol(name: String) -> Bool {
-    return name.hasPrefix("$S")
-}
-
-func isFunctionEntitySpec(name: String) -> Bool {
-    return name.hasSuffix("F")
 }
 
 @inlinable
